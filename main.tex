@@ -102,29 +102,13 @@ In this paper, we describe the modifications done to enable token-based authoriz
 \section{Introduction}
 \label{intro}
 
-Capability-based authorization provides an opportunity to reuse technology industry standards and software for High Energy Physics.  They provide stuff
+At the core of today's grid security infrastructure is the concept of \textit{identity} and \textit{impersonation} through grid certificates. A grid certificate provides you with a globally recognized identification.  The grid proxy allows a third party to impersonate you on your behalf.  The remote service maps your identity to a set of locally defined authorizations.
 
-At the core of today's grid security infrastructure is the concept of \textit{identity} and \textit{impersonation}.
+Securely accessing remote storage is a requirement for most HEP experiments.  Accessing remote storage from a worker node is common in HEP workflows.  The majority of access to remote storage is secured with an impersonation grid certificate.  The worker nodes are distributed through the grid, and are not fully considered trusted.  If the impersonation certificate is compromised, the attacker would have all the authorizations that available to the user.
 
-\begin{itemize}
-    \item A grid certificate provides you with a globally recognized identification
-    \item The grid proxy allows a third party to impersonate you on your behalf.
-    \item The remote service maps your identity to a set of locally defined authorizations
-\end{itemize}
+A capability-based authorization is a restricted token that gives access to only a limited set of authorizations.  This token can be restricted to only allow reading of certain paths from certain hosts.  Rather than allowing an attacker access to all authorizations that are allowed for the user, the capability-based token only allows access to a very limited set of authorizations.
 
-A grid certificate is a X509 \cite{housley1998internet} 
-
-% Talk about advantages of capability based
-
-% Identity vs. capability
-The High Energy Physics community, as well as the research infrastructures it relies on, use the X509 certificate for authentication.  The X509
-
-
-\subsection{Public Key}
-
-
-
-
+Capability-based authorization provides an opportunity to reuse technology industry standards and software for High Energy Physics.  The industry has moved to capability tokens for access remote resources.  Google, Box, Dropbox and many others use capability tokens to access storage and other resources.
 
 % Should we even have a background section?
 \section{Background}
@@ -133,11 +117,9 @@ The High Energy Physics community, as well as the research infrastructures it re
 \subsection{OAuth}
 \label{sec:oauth}
 
-OAuth is a workflow that allows for user to authorize a third party to perform actions on it's behalf.  It is widely used in 
+OAuth is a workflow that allows for user to authorize a third party to perform actions on it's behalf.  It is widely used in the internet industry.  For example, an OAuth workflow could generate the authorizations to allow a website to store files into a users Dropbox account.
 
-
-\subsection{X509}
-\label{sec:x509}
+An OAuth workflow requires the user to authorize an agent a small set of authorizations to access a third party service.
 
 \section{Implementation}
 \label{sec:implementation}
@@ -154,7 +136,7 @@ Various technologies had to be modified to utilize capability tokens.  Within a 
 \label{fig:tokenflow}
 \end{figure}
 
-Figure \ref{fig:tokenflow} shows the flow of a token through a workflow.  The token is first retrieved from a token server.  The token manager will manage the token on behalf of the user, retrieving refreshed tokens when the current token expires.  The scheduler will send the token to the execute host.  The execute host will make the token available to the job, which will use it to access resources such as data.
+Figure \ref{fig:tokenflow} shows the flow of a token through a workflow.  An access token and refresh token is first retrieved from a token server using an OAuth workflow.  The token manager will manage the token on behalf of the user, using the refresh token to retrive access tokens when the current token expires.  The scheduler will send the token to the execute host.  The execute host will make the token available to the job, which will use it to access resources.
 
 Each step of this workflow required modifications software that is used on the Grid.  HTCondor \cite{condor-practice} was enhanced in order to retrieve and refresh tokens on behalf of the user.  XRootD \cite{dorigo2005xrootd} and CVMFS \cite{buncic2010cernvm} where modified to accept and validate tokens to access data.
 
@@ -197,7 +179,7 @@ The library can be used to validate the signature of the token.  It can also be 
 \subsection{XRootD}
 \label{sec:xrootd}
 
-XRootD is a high performance data server.  We modified XRootD to pass an authorization header to a plugin.  We wrote a plugin \cite{xrootd-scitokens} that would use the SciTokens library to validate the incoming token.
+XRootD is a high performance data server.  We modified XRootD to pass an authorization header to a plugin.  The client would use the authorization header to pass the SciToken to XRootD.  We wrote a plugin \cite{xrootd-scitokens} that would use the SciTokens library to validate the incoming token.
 
 The plugin uses Boost \cite{dawes2009boost} to connect the C++ API of XRootD to the Python API of the SciTokens library.  XRootD passes the token to the plugin which creates an Access Control List of directories this token is allowed to access.  XRootD will cache the ACL until the token expires.
 
@@ -219,7 +201,7 @@ Figure \ref{fig:examplerequest} shows an example HTTP request including the toke
 Cern-VM FileSystem (CVMFS) is a read-only global data source.  It is mounted on execute hosts as a traditional filesystem, making it easier to use than a remote storage system.
 
 % External repos
-CVMFS has the capability to use external sources as the data repository.  The metadata for files such as size, name, and checksums are stored within the CVMFS namespace.  The contents of the files are stored on external servers reachable from CVMFS through an HTTP interface.  When a user requests the contents of a file, CVMFS will request the data from a list of potential external servers.
+CVMFS has the capability to use external sources as the data repository.  The metadata for files such as size, name, and checksums are stored within the CVMFS namespace.  The contents of the files are stored on external servers reachable from CVMFS through an HTTP interface.  When a user requests the contents of a file, CVMFS will request the data from a list of potential external HTTP servers.
 
 % Forwarding the tokens
 In order to authenticate with the external servers, a token must be passed from the user to the data server.  A token is stored within the user's environment and pointed to by an environment variable.  When a request for data that is protected by tokens is requested by CVMFS, it will start a separate process that will retrieve the token from the user's environment and validate it.  Once CVMFS has the token, it will use it to authenticate with the remote server and request the data. 
@@ -253,9 +235,32 @@ The \texttt{condor\_credd} manages the token credential throughout the lifetime 
 \section{Evaluation}
 \label{sec:eval}
 
-\section{Conclusion}
+There are many advantages for webservers when using tokens rather than certificates for authentication.
+
+When authenticating with a certificate, the authentication happens at the connection layer between the client and server.  In most cloud services, the SSL connection is proxied and terminated at the boundary before the web server receives the request.  A token is instead passed in the headers of the request which is sent through any proxies to the receiving web server.
+
+\section{Transition of CMS}
+\label{sec:transition}
+A transition of a large organization like CMS to tokens will take many changes.  I will break down the changes into workflows and user interfaces, data access during execution, and site to site data transfers.
+
+% Workflows and User Interface
+The user interface for submitting jobs will add another step to acquire the transfer token.  Currently, submission frameworks require the user to generate a grid proxy certificate.  Instead of creating a grid proxy, the submission framework will redirect the users to a server that will follow the OAuth workflow to acquire an access token.  The users will have to use a browser to acquire the token.
+
+In contrast to the current submission frameworks, rather than trusting the host certificate on the submission node, the framework will need to trust the host itself.  The OAuth workflow requires registration of each submission host in order to trust the client that the access token is issued. 
+
+The workflow will copy the access token to the execution host for use by the job.  The token flow will follow Figure \ref{fig:tokenflow}.
+
+% Data servers 
+As previously mentioned, data servers map an identity to a set of locally defined authorizations.  For capability based tokens, the authorizations will be in the tokens.  Therefore the data servers must be configured consistently across the organization.
+
+% Data movement (TPC)
+Data transfer servers must be modified to forward tokens for site to site transfers.  Third party copy requires a token to authorize reading from one data server, and a token to write to another server.  The data server must understand the third party copy command, as well as how to pass a token to another server.  Additionally, the service coordinating the transfer must know how to acquire and refresh the tokens.
+
+
+\section{Conclusions}
 \label{sec:conclusion}
 
+The capability tokens will change current processing and data services.  Using capability tokens can increase security by distributing limited tokens, allowing processing to run in less trusted resources than is acceptable with current identity tokens.
 
 
 %
