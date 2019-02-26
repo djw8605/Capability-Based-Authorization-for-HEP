@@ -77,7 +77,8 @@
         \firstname{Brian} \lastname{Bockelman}\inst{1}\fnsep\thanks{\email{bbockelm@cse.unl.edu}} \and
         \firstname{Jim} \lastname{Basney}\inst{2} \and 
         \firstname{Todd} \lastname{Tannenbaum}\inst{3} \and 
-        \firstname{Zach} \lastname{Miller}\inst{3}
+        \firstname{Zach} \lastname{Miller}\inst{3} \and
+        \firstname{Jeff} \lastname{Gaynor} \inst{2}
         % etc.
 }
 
@@ -104,11 +105,11 @@ In this paper, we describe the modifications done to enable token-based authoriz
 
 At the core of today's grid security infrastructure is the concept of \textit{identity} and \textit{impersonation} through grid certificates. A grid certificate provides you with a globally recognized identification.  The grid proxy allows a third party to impersonate you on your behalf.  The remote service maps your identity to a set of locally defined authorizations.
 
-Securely accessing remote storage is a requirement for most HEP experiments.  Accessing remote storage from a worker node is common in HEP workflows.  The majority of access to remote storage is secured with an impersonation grid certificate.  The worker nodes are distributed through the grid, and are not fully considered trusted.  If the impersonation certificate is compromised, the attacker would have all the authorizations that available to the user.
+Securely accessing remote storage is a requirement for most HEP experiments.  Accessing remote storage from a worker node is common in HEP workflows.  The majority of access to remote storage is secured with an impersonation grid certificate.  The worker nodes are distributed through the grid, and are not fully considered trusted.  If the impersonation certificate is compromised, the attacker would have all of the authorizations that are available to the user.
 
 A capability-based authorization is a restricted token that gives access to only a limited set of authorizations.  This token can be restricted to only allow reading of certain paths from certain hosts.  Rather than allowing an attacker access to all authorizations that are allowed for the user, the capability-based token only allows access to a very limited set of authorizations.
 
-Capability-based authorization provides an opportunity to reuse technology industry standards and software for High Energy Physics.  The industry has moved to capability tokens for access remote resources.  Google, Box, Dropbox and many others use capability tokens to access storage and other resources.
+Capability-based authorization provides an opportunity to reuse technology industry standards and software for High Energy Physics.  The industry has moved to capability tokens to access remote resources.  Google, Box, Dropbox and many others use capability tokens to access storage and other resources.
 
 % Should we even have a background section?
 \section{Background}
@@ -140,7 +141,7 @@ Figure \ref{fig:tokenflow} shows the flow of a token through a workflow.  An acc
 
 Each step of this workflow required modifications software that is used on the Grid.  HTCondor \cite{condor-practice} was enhanced in order to retrieve and refresh tokens on behalf of the user.  XRootD \cite{dorigo2005xrootd} and CVMFS \cite{buncic2010cernvm} where modified to accept and validate tokens to access data.
 
-XRootD and CVMFS both use the SciTokens library \cite{scitokens-lib}, described in \ref{sec:scitokenslib} to validate and authorized tokens.
+XRootD and CVMFS both use the SciTokens library \cite{scitokens-lib}, described in \ref{sec:scitokenslib} to validate and authorize tokens.
 
 
 \subsection{SciTokens Library}
